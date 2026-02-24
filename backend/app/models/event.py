@@ -19,6 +19,11 @@ class EventType(Enum):
     COMMENT = "comment"
 
 class Event(Base):
+    """
+    Raw event from Github.
+
+    Do not delete from this table.
+    """
     __tablename__ = "event"
     
     id: Mapped[int] = mapped_column(
@@ -30,7 +35,7 @@ class Event(Base):
     )
     source: Mapped[EventSource]
     type: Mapped[EventType]
-    data: Mapped[JSONB]
+    data: Mapped[JSONB] # Entire event from Github
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False

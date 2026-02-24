@@ -25,7 +25,7 @@ class User(Base):
         index=True
     )
     username: Mapped[Optional[str]]
-    github_username: Mapped[str] = mapped_column(
+    github_username: Mapped[Optional[str]] = mapped_column(
         nullable=True,
         unique=True
     )

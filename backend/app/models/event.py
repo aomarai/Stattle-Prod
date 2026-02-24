@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from models import Base
+from . import Base
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column

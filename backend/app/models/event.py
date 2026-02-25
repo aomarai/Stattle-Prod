@@ -1,3 +1,12 @@
+"""
+Models for events and related enums for event tracking.
+
+Classes:
+    EventSource (Enum): Enum for event sources (GitHub, GitLab, Bitbucket).
+    EventType (Enum): Enum for event types (commit, pull request, issue, comment).
+    Event (Base): SQLAlchemy model for storing raw events from external sources.
+"""
+
 from datetime import datetime
 from enum import Enum
 from . import Base
@@ -9,12 +18,31 @@ from sqlalchemy import Enum as SQLEnum
 
 
 class EventSource(Enum):
+    """
+    Enum representing the source of the event.
+
+    Attributes:
+        GITHUB: Event from GitHub.
+        GITLAB: Event from GitLab.
+        BITBUCKET: Event from Bitbucket.
+    """
+
     GITHUB = "github"
     GITLAB = "gitlab"
     BITBUCKET = "bitbucket"
 
 
 class EventType(Enum):
+    """
+    Enum representing the type of the event.
+
+    Attributes:
+        COMMIT: Commit event.
+        PULL_REQUEST: Pull request event.
+        ISSUE: Issue event.
+        COMMENT: Comment event.
+    """
+
     COMMIT = "commit"
     PULL_REQUEST = "pull_request"
     ISSUE = "issue"
@@ -23,9 +51,17 @@ class EventType(Enum):
 
 class Event(Base):
     """
-    Raw event from Github.
+    SQLAlchemy model for storing raw events from external sources such as GitHub.
 
-    Do not delete from this table.
+    Attributes:
+        id (int): Primary key.
+        user_id (int): Foreign key to user table.
+        source (EventSource): Source of the event.
+        type (EventType): Type of the event.
+        data (dict): Raw event data (JSON).
+        occurred_at (datetime): When the event occurred.
+        ingested_at (datetime): When the event was ingested.
+        github_event_id (str): Unique event ID from GitHub (if applicable).
     """
 
     __tablename__ = "event"

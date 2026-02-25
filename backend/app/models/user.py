@@ -1,3 +1,7 @@
+"""
+Models for users.
+"""
+
 from datetime import datetime
 from . import Base
 from sqlalchemy import func
@@ -7,6 +11,22 @@ from typing import Optional
 
 
 class User(Base):
+    """
+    SQLAlchemy model for application users.
+
+    Attributes:
+        id (int): Primary key.
+        authentik_sub (str): Unique Authentik subject identifier.
+        email (str): Unique email address.
+        username (Optional[str]): Optional username.
+        github_username (Optional[str]): Optional unique GitHub username.
+        github_access_token (Optional[str]): GitHub access token (should be encrypted at rest).
+        github_token_expiry (Optional[datetime]): Expiry date for GitHub token.
+        last_github_sync (Optional[datetime]): Last GitHub sync timestamp.
+        created_at (datetime): Creation timestamp.
+        updated_at (datetime): Last update timestamp.
+    """
+
     __tablename__ = "user"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, index=True)
@@ -34,4 +54,7 @@ class User(Base):
     )
 
     def __repr__(self):
+        """
+        Return a string representation of the User instance.
+        """
         return f"<User(id={self.id}, email='{self.email}', username='{self.username}')>"

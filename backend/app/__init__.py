@@ -1,0 +1,3 @@
+"""
+Pylint satisfier
+"""

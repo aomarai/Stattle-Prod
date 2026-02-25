@@ -11,4 +11,4 @@ class User(BaseModel):
     github_username: Optional[str]
     github_access_token: Optional[str]
     github_token_expiry: Optional[datetime]
-    last_github_sync: datetime
+    last_github_sync: Optional[datetime]

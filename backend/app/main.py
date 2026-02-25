@@ -1,9 +1,16 @@
+"""
+Main module that runs the whole application.
+"""
+
 from fastapi import FastAPI
 
 app = FastAPI()
 
-@app.get('/')
+
+@app.get("/")
 async def root():
-    return {
-        'message': 'Hello World!'
-    }
+    """
+    Root endpoint.
+    :return: HTTP response
+    """
+    return {"message": "Hello World!"}

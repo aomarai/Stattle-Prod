@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from ..models.metrics import PRState
 
+
 class DailyStats(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     date: datetime
@@ -17,7 +21,10 @@ class DailyStats(BaseModel):
     lines_deleted_count: int
     repos_contributed_to_count: int
 
+
 class PRAnalytics(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     github_pr_id: int
@@ -26,15 +33,18 @@ class PRAnalytics(BaseModel):
     title: str
     state: PRState
     opened_at: datetime
-    closed_at: datetime
-    merged_at: datetime
+    closed_at: Optional[datetime]
+    merged_at: Optional[datetime]
     review_count: int
     comment_count: int
     files_changed: int
     lines_added: int
     lines_deleted: int
 
+
 class WeeklyLanguages(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     language: str

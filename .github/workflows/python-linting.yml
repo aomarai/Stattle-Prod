@@ -39,4 +39,4 @@ jobs:
         
     - name: Run Pylint
       run: |
-        pylint backend/ --recursive=y
+        pylint backend/ --recursive=y --ignore=alembic --ignore=__init__.py

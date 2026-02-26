@@ -1,6 +1,28 @@
 version: '3.8'
 
 services:
+#  backend:
+#    build:
+#      context: ./backend
+#      dockerfile: Dockerfile
+#    container_name: stattle_backend
+#    restart: unless-stopped
+#    environment:
+#      GITHUB_TOKEN: ${GITHUB_TOKEN}
+#    depends_on:
+#      - postgres
+#    networks:
+#      - stattle_network
+
+#  frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    container_name: stattle_frontend
+#    restart: unless-stopped
+#    networks:
+#      - stattle_network
+
   postgres:
     image: postgres:18-alpine
     container_name: stattle_postgres
@@ -14,5 +36,23 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+#  nginx:
+#    image: nginx:alpine
+#    container_name: stattle_nginx
+#    restart: unless-stopped
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    volumes:
+#      - .nginx.conf:/etc/nginx/nginx.conf:ro
+#    depends_on:
+#      - stattle_prod_backend
+#    networks:
+#      - stattle_network
+
 volumes:
   postgres_data:
+
+networks:
+  stattle_network:
+    driver: bridge

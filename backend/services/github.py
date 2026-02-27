@@ -83,7 +83,11 @@ class GitHubService:
         """
         Retrieve the events related to a specific user.
         :param username: GitHub username of the user.
-        :param per_page: Number of events per page.
-        :return: List of events related to a specific user.
+        :param per_page: Number of events per page to request from GitHub (pagination page size).
+        :return: List of all events related to a specific user.
         """
-        return await self.get(f"users/{username}/events", params={"per_page": per_page})
+        return await self.get(
+            f"users/{username}/events",
+            params={"per_page": per_page},
+            paginate=True,
+        )

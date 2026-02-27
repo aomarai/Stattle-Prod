@@ -2,6 +2,7 @@
 Module for interacting with the GitHub API to fetch user information.
 """
 
+import asyncio
 import re
 from typing import Any, Optional, Union
 
@@ -14,6 +15,7 @@ class GitHubService:
     """
 
     _client: Optional[httpx.AsyncClient] = None
+    _lock = asyncio.Lock()
 
     def __init__(self, token: str):
         self.base_url = "https://api.github.com"
@@ -30,8 +32,9 @@ class GitHubService:
         Returns:
             httpx.AsyncClient: The shared AsyncClient instance.
         """
-        if cls._client is None:
-            cls._client = httpx.AsyncClient()
+        async with cls._lock:
+            if cls._client is None:
+                cls._client = httpx.AsyncClient()
         return cls._client
 
     @classmethod

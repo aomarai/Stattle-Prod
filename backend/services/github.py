@@ -16,7 +16,7 @@ class GitHubService:
     def __init__(self, token: str):
         self.base_url = "https://api.github.com"
         self.headers = {
-            "Authorization": f"token {token}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
 

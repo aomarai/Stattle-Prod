@@ -36,6 +36,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:8.4.2
+    container_name: stattle_redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - stattle_network
+
 #  nginx:
 #    image: nginx:alpine
 #    container_name: stattle_nginx
@@ -52,6 +66,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   stattle_network:

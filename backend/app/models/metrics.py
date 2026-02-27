@@ -6,10 +6,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
-
-from sqlalchemy import Enum as SQLEnum
 
 from . import Base
 

@@ -8,11 +8,11 @@ Covers:
 - WeeklyLanguages: creation, unique constraint (user_id + language + week_start).
 """
 
-import pytest
 from datetime import datetime, timezone
-from sqlalchemy.exc import IntegrityError
 
+import pytest
 from app.models.metrics import DailyStats, PRAnalytics, PRState, WeeklyLanguages
+from sqlalchemy.exc import IntegrityError
 from tests.conftest import (
     make_user,
     make_daily_stats,

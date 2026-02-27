@@ -8,16 +8,16 @@ JSONB columns are overridden with SQLAlchemy's JSON type so that SQLite
 can render them correctly during schema creation.
 """
 
-import pytest
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, event as sa_event, JSON
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.dialects.postgresql import JSONB
 
+import pytest
 from app.models import Base
-from app.models.user import User
 from app.models.event import Event, EventSource, EventType
 from app.models.metrics import DailyStats, PRAnalytics, PRState, WeeklyLanguages
+from app.models.user import User
+from sqlalchemy import create_engine, event as sa_event, JSON
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import sessionmaker, Session
 
 
 def _override_jsonb_for_sqlite(metadata):

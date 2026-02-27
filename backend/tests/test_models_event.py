@@ -10,11 +10,11 @@ Covers:
 - Foreign key to User.
 """
 
-import pytest
 from datetime import datetime, timezone
-from sqlalchemy.exc import IntegrityError
 
+import pytest
 from app.models.event import Event, EventSource, EventType
+from sqlalchemy.exc import IntegrityError
 from tests.conftest import make_user
 
 

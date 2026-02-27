@@ -61,7 +61,9 @@ async def test_get_non_paginated_returns_json(service, monkeypatch):
 
     assert result == {"login": "octocat"}
     mock_client.get.assert_awaited_once_with(
-        "https://api.github.com/user", headers=service.headers
+        "https://api.github.com/user",
+        headers=service.headers,
+        params={"per_page": 1},
     )
 
 

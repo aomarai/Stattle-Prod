@@ -60,13 +60,16 @@ class GitHubService:
         return match.group(1) if match else None
 
     async def get(
-        self, endpoint: str, params: Optional[dict[str, Any]] = None, **kwargs
+        self,
+        endpoint: str,
+        params: Optional[dict[str, Any]] = None,
+        paginate: bool = False,
     ) -> Union[dict[str, Any], list[Any]]:
         """
         Performs a GET request to the specified GitHub API endpoint.
         :param endpoint: Endpoint to be requested.
         :param params: Additional query parameters.
-        :param kwargs: Additional query parameters.
+        :param paginate: Whether to perform pagination during request.
 
         :raise httpx.HTTPError: HTTP error.
 
@@ -76,7 +79,7 @@ class GitHubService:
         url = f"{self.base_url}/{endpoint}"
         client = await self.get_client()
 
-        if not kwargs.get("paginate", False):
+        if not paginate:
             response = await client.get(url, headers=self.headers, params=params)
             response.raise_for_status()
             return response.json()

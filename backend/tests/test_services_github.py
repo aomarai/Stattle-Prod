@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
+
 from services.github import GitHubService
 
 
@@ -306,5 +307,5 @@ class TestServiceInitialization:
         """Constructor sets base URL and auth headers."""
         service = GitHubService("my-token-123")
         assert service.base_url == "https://api.github.com"
-        assert service.headers["Authorization"] == "token my-token-123"
+        assert service.headers["Authorization"] == "Bearer my-token-123"
         assert service.headers["Accept"] == "application/vnd.github.v3+json"

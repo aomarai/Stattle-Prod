@@ -125,4 +125,149 @@ async def test_get_user_events_calls_get(service, monkeypatch):
     result = await service.get_user_events("octo", per_page=50)
 
     assert result == [{"id": 1}]
-    service.get.assert_awaited_once_with("users/octo/events", params={"per_page": 50})
+    service.get.assert_awaited_once_with(
+        "users/octo/events", params={"per_page": 50}, paginate=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_user_events_default_per_page(service, monkeypatch):
+    service.get = AsyncMock(return_value=[{"id": 1}])
+
+    result = await service.get_user_events("octo")
+
+    assert result == [{"id": 1}]
+    service.get.assert_awaited_once_with(
+        "users/octo/events", params={"per_page": 100}, paginate=True
+    )
+
+
+def test_extract_next_url_valid_link(service):
+    link_header = '<https://api.github.com/page2>; rel="next"'
+    result = service._extract_next_url(link_header)
+    assert result == "https://api.github.com/page2"
+
+
+def test_extract_next_url_no_next_rel(service):
+    link_header = '<https://api.github.com/page1>; rel="prev"'
+    result = service._extract_next_url(link_header)
+    assert result is None
+
+
+def test_extract_next_url_none_header(service):
+    result = service._extract_next_url(None)
+    assert result is None
+
+
+def test_extract_next_url_empty_string(service):
+    result = service._extract_next_url("")
+    assert result is None
+
+
+def test_extract_next_url_malformed_no_closing_bracket(service):
+    link_header = '<https://api.github.com/page2; rel="next"'
+    result = service._extract_next_url(link_header)
+    assert result is None
+
+
+def test_extract_next_url_multiple_links(service):
+    link_header = '<https://api.github.com/page1>; rel="prev", <https://api.github.com/page3>; rel="next"'
+    result = service._extract_next_url(link_header)
+    assert result == "https://api.github.com/page3"
+
+
+def test_extract_next_url_with_query_params(service):
+    link_header = '<https://api.github.com/page2?per_page=100&page=2>; rel="next"'
+    result = service._extract_next_url(link_header)
+    assert result == "https://api.github.com/page2?per_page=100&page=2"
+
+
+@pytest.mark.asyncio
+async def test_get_paginated_single_page(service, monkeypatch):
+    mock_client = Mock(spec=httpx.AsyncClient)
+    response = MockResponse([{"id": 1}], headers={})
+    mock_client.get = AsyncMock(return_value=response)
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
+
+    result = await service.get("users/octo/events", paginate=True)
+
+    assert result == [{"id": 1}]
+    mock_client.get.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_get_paginated_three_pages(service, monkeypatch):
+    mock_client = Mock(spec=httpx.AsyncClient)
+    response1 = MockResponse(
+        [{"id": 1}],
+        headers={
+            "Link": '<https://api.github.com/users/octo/events?page=2>; rel="next"'
+        },
+    )
+    response2 = MockResponse(
+        [{"id": 2}],
+        headers={
+            "Link": '<https://api.github.com/users/octo/events?page=3>; rel="next"'
+        },
+    )
+    response3 = MockResponse([{"id": 3}], headers={})
+    mock_client.get = AsyncMock(side_effect=[response1, response2, response3])
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
+
+    result = await service.get(
+        "users/octo/events", params={"per_page": 1}, paginate=True
+    )
+
+    assert result == [{"id": 1}, {"id": 2}, {"id": 3}]
+    assert mock_client.get.await_count == 3
+
+
+@pytest.mark.asyncio
+async def test_get_paginated_empty_response(service, monkeypatch):
+    mock_client = Mock(spec=httpx.AsyncClient)
+    response = MockResponse([], headers={})
+    mock_client.get = AsyncMock(return_value=response)
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
+
+    result = await service.get("users/octo/events", paginate=True)
+
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_non_paginated_with_params(service, monkeypatch):
+    mock_client = Mock(spec=httpx.AsyncClient)
+    response = MockResponse({"login": "octocat", "id": 123})
+    mock_client.get = AsyncMock(return_value=response)
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
+
+    result = await service.get("user", params={"foo": "bar"})
+
+    assert result == {"login": "octocat", "id": 123}
+    mock_client.get.assert_awaited_once_with(
+        "https://api.github.com/user",
+        headers=service.headers,
+        params={"foo": "bar"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_close_client_when_none():
+    GitHubService._client = None
+    await GitHubService.close_client()
+    assert GitHubService._client is None
+
+
+def test_service_initialization():
+    service = GitHubService("my-token-123")
+    assert service.base_url == "https://api.github.com"
+    assert service.headers["Authorization"] == "token my-token-123"
+    assert service.headers["Accept"] == "application/vnd.github.v3+json"

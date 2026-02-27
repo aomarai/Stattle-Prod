@@ -35,15 +35,13 @@ class GitHubService:
     async def get(self, endpoint: str, params: dict = None, **kwargs) -> Union[dict[str, Any], list[Any]]:
         """
         Performs a GET request to the specified GitHub API endpoint.
-        Args:
-            endpoint: The API endpoint to fetch data from (e.g., 'users/{username}').
-            params: Optional query parameters for the request.
-            **kwargs: Additional keyword arguments (e.g., paginate=True).
 
-        Raises: httpx.HTTPStatusError: If the response status code indicates an error.
-
-        Returns: API response data. Without pagination, returns a dict. With paginate=True, returns a list of all paginated results.
-
+        :param endpoint: The API endpoint to fetch data from (e.g., ``"users/{username}"``).
+        :param params: Optional query parameters for the request.
+        :param kwargs: Additional keyword arguments (e.g., ``paginate=True``).
+        :raises httpx.HTTPStatusError: If the response status code indicates an error.
+        :return: API response data. Without pagination, returns a dict. With ``paginate=True``, returns
+            a list of all paginated results.
         """
         url = f"{self.base_url}/{endpoint}"
         client = await self.get_client()

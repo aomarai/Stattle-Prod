@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Optional
+from typing import Optional, Union
 
 import redis.asyncio as redis
 
@@ -31,6 +31,11 @@ class RedisClient:
     async def get(cls, key: str) -> Optional[str]:
         client = await cls.get_client()
         return await client.get(key)
+
+    @classmethod
+    async def set(cls, key: str, value: Union[str, int, float, bytes], ex: Optional[int] = None) -> None:
+        client = await cls.get_client()
+        return await client.set(key, value, ex)
 
     @classmethod
     async def close(cls) -> None:

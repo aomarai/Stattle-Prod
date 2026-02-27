@@ -9,12 +9,14 @@ Classes:
 
 from datetime import datetime
 from enum import Enum
-from . import Base
+
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import DateTime
-from sqlalchemy import Enum as SQLEnum
+
+from . import Base
 
 
 class EventSource(Enum):
@@ -75,6 +77,8 @@ class Event(Base):
         DateTime(timezone=True), index=True, nullable=False
     )
     ingested_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),  # pylint: disable=not-callable
     )
     github_event_id: Mapped[str] = mapped_column(index=True, nullable=True, unique=True)

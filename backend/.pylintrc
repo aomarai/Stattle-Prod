@@ -1,0 +1,72 @@
+[MASTER]
+# Specify a score threshold to be exceeded before program exits with error
+fail-under=8.0
+
+# Files or directories to be skipped. They should be base names, not paths.
+ignore=alembic,
+       __pycache__,
+       .pytest_cache,
+       .coverage,
+       htmlcov
+
+# Files or directories matching the regex patterns are skipped. The regex
+# matches against base names, not paths.
+ignore-patterns=^\.#,
+                .*_cache.*,
+                .*\.pyc$,
+                .*test_.*\.py$,
+                conftest\.py$
+
+# Add files or directories matching the regex patterns to the ignore-list.
+# The regex matches against paths and can be in Posix or Windows format.
+ignore-paths=^backend/alembic/.*$,
+             ^backend/alembic\.ini$,
+             .*/__pycache__/.*,
+             .*/\.venv/.*,
+             .*/venv/.*
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=R0903,  # too-few-public-methods (SQLAlchemy models/Pydantic schemas)
+        W0511   # fixme (TODO comments are acceptable during development)
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,
+           j,
+           k,
+           ex,
+           _,
+           id,
+           db
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=120
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class
+max-attributes=15
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=10
+
+[TYPECHECK]
+# List of decorators that produce context managers
+contextmanager-decorators=contextlib.contextmanager
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E1101 when accessed.
+generated-members=sqlalchemy.func.*
+
+[IMPORTS]
+# Allow wildcard imports from SQLAlchemy
+allow-wildcard-with-all=no
+
+
+
+

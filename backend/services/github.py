@@ -24,12 +24,21 @@ class GitHubService:
 
     @classmethod
     async def get_client(cls) -> httpx.AsyncClient:
+        """
+        Get or create a singleton AsyncClient instance.
+
+        Returns:
+            httpx.AsyncClient: The shared AsyncClient instance.
+        """
         if cls._client is None:
             cls._client = httpx.AsyncClient()
         return cls._client
 
     @classmethod
     async def close_client(cls) -> None:
+        """
+        Close the singleton AsyncClient instance if it exists.
+        """
         if cls._client is not None:
             await cls._client.aclose()
             cls._client = None

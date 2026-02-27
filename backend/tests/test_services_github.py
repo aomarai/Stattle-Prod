@@ -1,8 +1,7 @@
-import httpx
-import pytest
-
 from unittest.mock import AsyncMock, Mock
 
+import httpx
+import pytest
 from services.github import GitHubService
 
 
@@ -54,7 +53,9 @@ async def test_get_non_paginated_returns_json(service, monkeypatch):
     mock_client = Mock(spec=httpx.AsyncClient)
     response = MockResponse({"login": "octocat"})
     mock_client.get = AsyncMock(return_value=response)
-    monkeypatch.setattr(GitHubService, "get_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
 
     result = await service.get("user", params={"per_page": 1})
 
@@ -75,7 +76,9 @@ async def test_get_paginated_aggregates_pages(service, monkeypatch):
     )
     response2 = MockResponse([{"id": 2}], headers={})
     mock_client.get = AsyncMock(side_effect=[response1, response2])
-    monkeypatch.setattr(GitHubService, "get_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
 
     result = await service.get(
         "users/octo/events", params={"per_page": 1}, paginate=True
@@ -95,7 +98,9 @@ async def test_get_raises_http_status_error(service, monkeypatch):
     request = httpx.Request("GET", "https://api.github.com/user")
     response = httpx.Response(401, request=request)
     mock_client.get = AsyncMock(return_value=response)
-    monkeypatch.setattr(GitHubService, "get_client", AsyncMock(return_value=mock_client))
+    monkeypatch.setattr(
+        GitHubService, "get_client", AsyncMock(return_value=mock_client)
+    )
 
     with pytest.raises(httpx.HTTPStatusError):
         await service.get("user")
@@ -118,7 +123,4 @@ async def test_get_user_events_calls_get(service, monkeypatch):
     result = await service.get_user_events("octo", per_page=50)
 
     assert result == [{"id": 1}]
-    service.get.assert_awaited_once_with(
-        "users/octo/events", params={"per_page": 50}
-    )
-
+    service.get.assert_awaited_once_with("users/octo/events", params={"per_page": 50})

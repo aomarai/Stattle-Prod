@@ -3,6 +3,7 @@ Pydantic schemas for event models.
 """
 
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 from ..models.event import EventSource, EventType

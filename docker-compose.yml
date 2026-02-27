@@ -1,27 +1,27 @@
 version: '3.8'
 
 services:
-#  backend:
-#    build:
-#      context: ./backend
-#      dockerfile: Dockerfile
-#    container_name: stattle_backend
-#    restart: unless-stopped
-#    environment:
-#      GITHUB_TOKEN: ${GITHUB_TOKEN}
-#    depends_on:
-#      - postgres
-#    networks:
-#      - stattle_network
+  #  backend:
+  #    build:
+  #      context: ./backend
+  #      dockerfile: Dockerfile
+  #    container_name: stattle_backend
+  #    restart: unless-stopped
+  #    environment:
+  #      GITHUB_TOKEN: ${GITHUB_TOKEN}
+  #    depends_on:
+  #      - postgres
+  #    networks:
+  #      - stattle_network
 
-#  frontend:
-#    build:
-#      context: ./frontend
-#      dockerfile: Dockerfile
-#    container_name: stattle_frontend
-#    restart: unless-stopped
-#    networks:
-#      - stattle_network
+  #  frontend:
+  #    build:
+  #      context: ./frontend
+  #      dockerfile: Dockerfile
+  #    container_name: stattle_frontend
+  #    restart: unless-stopped
+  #    networks:
+  #      - stattle_network
 
   postgres:
     image: postgres:18-alpine

@@ -9,11 +9,11 @@ Covers:
 - github_access_token and token-expiry fields.
 """
 
-import pytest
 from datetime import datetime, timezone
-from sqlalchemy.exc import IntegrityError
 
+import pytest
 from app.models.user import User
+from sqlalchemy.exc import IntegrityError
 from tests.conftest import make_user
 
 
@@ -22,10 +22,7 @@ class TestUserCreation:
 
     def test_create_user_minimal(self, db_session):
         """User can be created with only required fields."""
-        user = User(
-            authentik_sub="sub-minimal",
-            email="minimal@example.com",
-        )
+        user = User(authentik_sub="sub-minimal", email="minimal@example.com")
         db_session.add(user)
         db_session.flush()
 

@@ -3,11 +3,13 @@ Models for users.
 """
 
 from datetime import datetime
-from . import Base
+from typing import Optional
+
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import DateTime
-from typing import Optional
+
+from . import Base
 
 
 class User(Base):

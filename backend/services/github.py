@@ -4,9 +4,15 @@ Module for interacting with the GitHub API to fetch user information.
 
 import asyncio
 import re
+import utils.logging
+from datetime import datetime
 from typing import Any, Optional, Union
 
 import httpx
+
+from utils.redis_client import RedisClient
+
+logger = utils.logging.get_logger(__name__)
 
 
 class GitHubService:
@@ -45,6 +51,21 @@ class GitHubService:
         if cls._client is not None:
             await cls._client.aclose()
             cls._client = None
+
+    async def _get_current_rate_limit(
+        self,
+    ) -> None:  # TODO: Finish redis stuff for github service
+        remaining = await RedisClient.get("github:rate_limit:remaining")
+        reset_time = await RedisClient.get("github:rate_limit:reset_time")
+
+        if remaining and int(remaining) < 10:
+            if reset_time:
+                wait_seconds = int(reset_time) - int(datetime.now().timestamp())
+                if wait_seconds > 0:
+                    logger.warning(
+                        f"Rate limit exceeded. Reset time: {reset_time}. Sleeping for {wait_seconds} seconds."
+                    )
+                    await asyncio.sleep(wait_seconds)
 
     @staticmethod
     def _extract_next_url(link_header: Optional[str]) -> Optional[str]:

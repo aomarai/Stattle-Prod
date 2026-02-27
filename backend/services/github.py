@@ -49,7 +49,7 @@ class GitHubService:
         client = await self.get_client()
 
         if not kwargs.get("paginate", False):
-            response = await client.get(url, headers=self.headers)
+            response = await client.get(url, headers=self.headers, params=params)
             response.raise_for_status()
             return response.json()
         else:

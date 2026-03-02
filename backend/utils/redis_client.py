@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 from typing import Optional, Union
 
 import redis.asyncio as redis
+
+logger = logging.getLogger(__name__)
 
 
 class RedisClient:
@@ -16,15 +19,18 @@ class RedisClient:
         If no instance is running, create a new instance.
         :return: redis.Redis instance
         """
-        async with cls._lock:
-            if cls._instance is None:
-                cls._instance = await redis.from_url(
-                    f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}",
-                    encoding="utf-8",
-                    decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_keepalive=True,
-                )
+        try:
+            async with cls._lock:
+                if cls._instance is None:
+                    cls._instance = await redis.from_url(
+                        f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}",
+                        encoding="utf-8",
+                        decode_responses=True,
+                        socket_connect_timeout=5,
+                        socket_keepalive=True
+                    )
+        except redis.ConnectionError:
+            logger.exception("Failed to establish Redis connection during client creation.")
         return cls._instance
 
     @classmethod

@@ -9,6 +9,7 @@ from enum import Enum
 from typing import Any, Optional, Union
 
 import httpx
+import redis
 
 import utils.logging
 from utils.redis_client import RedisClient
@@ -30,9 +31,9 @@ class GitHubRateLimitKey(Enum):
     RESET = "reset"
     LIMIT = "limit"
 
-    def full_key(self) -> str:
+    def full_key(self, scope: str) -> str:
         """Get the full Redis key."""
-        return f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:{self.value}"
+        return f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:{scope}:{self.value}"
 
 
 class GitHubService:
@@ -96,19 +97,24 @@ class GitHubService:
 
         :return: None
         """
-        remaining = await RedisClient.get(GitHubRateLimitKey.REMAINING.full_key())
-        reset_time = await RedisClient.get(GitHubRateLimitKey.RESET.full_key())
+        try:
+            remaining = await RedisClient.get(GitHubRateLimitKey.REMAINING.full_key())
+            reset_time = await RedisClient.get(GitHubRateLimitKey.RESET.full_key())
 
-        if remaining and int(remaining) < 10:
-            if reset_time:
-                wait_seconds = int(reset_time) - int(datetime.now().timestamp())
-                if wait_seconds > 0:
-                    logger.warning(
-                        f"Rate limit approaching limit. Reset time: {reset_time}. Sleeping for {wait_seconds} seconds."
-                    )
-                    await asyncio.sleep(wait_seconds + 1)
+            if remaining and int(remaining) < 10:
+                if reset_time:
+                    wait_seconds = int(reset_time) - int(datetime.now().timestamp())
+                    if wait_seconds > 0:
+                        logger.warning(
+                            f"Rate limit has {int(remaining)} queries remaining. Reset time: {reset_time}. Sleeping for {wait_seconds} seconds."
+                        )
+                        await asyncio.sleep(wait_seconds + 1)
+        except redis.ConnectionError:
+            logger.exception(
+                f"Error establishing connection to Redis during rate limit check."
+            )
 
-    async def _update_rate_limit(self, response: httpx.Response) -> None:
+    async def _update_rate_limit(self, scope: str, response: httpx.Response) -> None:
         """Update rate limit atomically using a Redis Lua script."""
         if "X-RateLimit-Reset" not in response.headers:
             return
@@ -120,21 +126,26 @@ class GitHubService:
         remaining = response.headers.get("X-RateLimit-Remaining", "")
         limit = response.headers.get("X-RateLimit-Limit", "")
 
-        client = await RedisClient.get_client()
+        try:
+            client = await RedisClient.get_client()
 
-        await client.eval(
-            self.LUA_UPDATE_RATE_LIMIT,
-            4,
-            f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:timestamp",
-            GitHubRateLimitKey.RESET.full_key(),
-            GitHubRateLimitKey.REMAINING.full_key(),
-            GitHubRateLimitKey.LIMIT.full_key(),
-            str(current_timestamp),
-            str(ttl),
-            str(reset_time),
-            remaining,
-            limit,
-        )
+            await client.eval(
+                self.LUA_UPDATE_RATE_LIMIT,
+                4,
+                f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:{scope}:timestamp",
+                GitHubRateLimitKey.RESET.full_key(),
+                GitHubRateLimitKey.REMAINING.full_key(),
+                GitHubRateLimitKey.LIMIT.full_key(),
+                str(current_timestamp),
+                str(ttl),
+                str(reset_time),
+                remaining,
+                limit,
+            )
+        except redis.ConnectionError:
+            logger.exception(
+                "Error establishing connection to Redis during rate limit update."
+            )
 
     @staticmethod
     def _extract_next_url(link_header: Optional[str]) -> Optional[str]:
@@ -146,8 +157,12 @@ class GitHubService:
         if not link_header:
             return None
 
-        match = re.search(r'<([^>]+)>;\s*rel="next"', link_header)
-        return match.group(1) if match else None
+        try:
+            match = re.search(r'<([^>]+)>;\s*rel="next"', link_header)
+            return match.group(1) if match else None
+        except re.error:
+            logger.exception("Error extracting next URL from link header.")
+            return None
 
     async def get(
         self,

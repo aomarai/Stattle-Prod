@@ -10,8 +10,11 @@ Covers:
 - Lua script execution for atomic rate limit updates.
 """
 
+import random
+import string
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock, patch
+from typing import Optional
+from unittest.mock import AsyncMock, Mock, patch, ANY
 
 import httpx
 import pytest
@@ -38,6 +41,16 @@ class MockResponse:
 def service():
     """Provide a GitHubService instance with a test token."""
     return GitHubService("test-token")
+
+
+def _generate_github_token(length: int = 40) -> str:
+    """Generate a mock GitHub access token."""
+    allowed_chars = string.ascii_letters + string.digits + "_"
+    return "".join(random.choice(allowed_chars) for _ in range(length))
+
+
+def _get_scope(secret_string: Optional[str] = None) -> str:
+    return f"ghp_{secret_string if secret_string else _generate_github_token()}"
 
 
 class TestClientLifecycle:
@@ -91,7 +104,7 @@ class TestGetRequests:
         )
         monkeypatch.setattr(RedisClient, "get", AsyncMock(return_value=None))
 
-        result = await service.get("user", params={"per_page": 1})
+        result = await service.get("user", scope=_get_scope(), params={"per_page": 1})
 
         assert result == {"login": "octocat"}
         mock_client.get.assert_awaited_once_with(
@@ -111,7 +124,7 @@ class TestGetRequests:
         )
         monkeypatch.setattr(RedisClient, "get", AsyncMock(return_value=None))
 
-        result = await service.get("user", params={"foo": "bar"})
+        result = await service.get("user", scope=_get_scope(), params={"foo": "bar"})
 
         assert result == {"login": "octocat", "id": 123}
         mock_client.get.assert_awaited_once_with(
@@ -133,7 +146,7 @@ class TestGetRequests:
         monkeypatch.setattr(RedisClient, "get", AsyncMock(return_value=None))
 
         with pytest.raises(httpx.HTTPStatusError):
-            await service.get("user")
+            await service.get("user", scope=_get_scope())
 
 
 class TestPagination:
@@ -160,7 +173,10 @@ class TestPagination:
         )
 
         result = await service.get(
-            "users/octo/events", params={"per_page": 1}, paginate=True
+            "users/octo/events",
+            scope=_get_scope(),
+            params={"per_page": 1},
+            paginate=True,
         )
 
         assert result == [{"id": 1}, {"id": 2}]
@@ -184,7 +200,9 @@ class TestPagination:
             RedisClient, "get_client", AsyncMock(return_value=AsyncMock())
         )
 
-        result = await service.get("users/octo/events", paginate=True)
+        result = await service.get(
+            "users/octo/events", scope=_get_scope(), paginate=True
+        )
 
         assert result == [{"id": 1}]
         mock_client.get.assert_awaited_once()
@@ -216,7 +234,10 @@ class TestPagination:
         )
 
         result = await service.get(
-            "users/octo/events", params={"per_page": 1}, paginate=True
+            "users/octo/events",
+            scope=_get_scope(),
+            params={"per_page": 1},
+            paginate=True,
         )
 
         assert result == [{"id": 1}, {"id": 2}, {"id": 3}]
@@ -236,7 +257,9 @@ class TestPagination:
             RedisClient, "get_client", AsyncMock(return_value=AsyncMock())
         )
 
-        result = await service.get("users/octo/events", paginate=True)
+        result = await service.get(
+            "users/octo/events", scope=_get_scope(), paginate=True
+        )
 
         assert result == []
 
@@ -248,34 +271,41 @@ class TestUserEndpoints:
     async def test_get_user_info_calls_get(self, service, monkeypatch):
         """get_user_info proxies to the generic get method."""
         service.get = AsyncMock(return_value={"id": 1})
+        scope = _get_scope()
 
-        result = await service.get_user_info()
+        result = await service.get_user_info(scope=scope)
 
         assert result == {"id": 1}
-        service.get.assert_awaited_once_with("user")
+        service.get.assert_awaited_once_with("user", scope)
 
     @pytest.mark.asyncio
     async def test_get_user_events_calls_get(self, service, monkeypatch):
         """get_user_events forwards username and per_page settings."""
         service.get = AsyncMock(return_value=[{"id": 1}])
 
-        result = await service.get_user_events("octo", per_page=50)
+        scope = _get_scope()
+
+        result = await service.get_user_events("octo", per_page=50, scope=scope)
 
         assert result == [{"id": 1}]
         service.get.assert_awaited_once_with(
-            "users/octo/events", params={"per_page": 50}, paginate=True
+            "users/octo/events",
+            params={"per_page": 50},
+            paginate=True,
+            scope=scope,
         )
 
     @pytest.mark.asyncio
     async def test_get_user_events_default_per_page(self, service, monkeypatch):
         """get_user_events uses the default per_page size when omitted."""
         service.get = AsyncMock(return_value=[{"id": 1}])
+        scope = _get_scope()
 
-        result = await service.get_user_events("octo")
+        result = await service.get_user_events("octo", scope=scope)
 
         assert result == [{"id": 1}]
         service.get.assert_awaited_once_with(
-            "users/octo/events", params={"per_page": 100}, paginate=True
+            "users/octo/events", params={"per_page": 100}, paginate=True, scope=scope
         )
 
 
@@ -350,7 +380,9 @@ class TestRateLimitCheck:
         with patch.object(RedisClient, "get") as mock_redis_get:
             mock_redis_get.side_effect = [None, None]  # No remaining, no reset
 
-            await service._check_rate_limit()
+            await service._check_rate_limit(
+                scope=_get_scope(),
+            )
 
             assert mock_redis_get.await_count == 2
 
@@ -360,7 +392,9 @@ class TestRateLimitCheck:
         with patch.object(RedisClient, "get") as mock_redis_get:
             mock_redis_get.side_effect = ["100", "1234567890"]
 
-            await service._check_rate_limit()
+            await service._check_rate_limit(
+                scope=_get_scope(),
+            )
 
             assert mock_redis_get.await_count == 2
             # Should not sleep
@@ -375,7 +409,9 @@ class TestRateLimitCheck:
             mock_redis_get.side_effect = ["5", str(reset_time)]
 
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await service._check_rate_limit()
+                await service._check_rate_limit(
+                    scope=_get_scope(),
+                )
 
                 mock_sleep.assert_awaited_once()
                 sleep_duration = mock_sleep.call_args[0][0]
@@ -391,7 +427,9 @@ class TestRateLimitCheck:
             mock_redis_get.side_effect = ["5", str(reset_time)]
 
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await service._check_rate_limit()
+                await service._check_rate_limit(
+                    scope=_get_scope(),
+                )
 
                 mock_sleep.assert_not_awaited()
 
@@ -402,7 +440,9 @@ class TestRateLimitCheck:
             mock_redis_get.side_effect = ["5", None]
 
             with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                await service._check_rate_limit()
+                await service._check_rate_limit(
+                    scope=_get_scope(),
+                )
 
                 mock_sleep.assert_not_awaited()
 
@@ -434,7 +474,7 @@ class TestRateLimitUpdate:
             mock_get_client.return_value = mock_redis
             mock_redis.eval = AsyncMock()
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             # Verify eval was called
             mock_redis.eval.assert_awaited_once()
@@ -455,7 +495,7 @@ class TestRateLimitUpdate:
             mock_redis = AsyncMock()
             mock_get_client.return_value = mock_redis
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             # Lua script should not be executed
             mock_redis.eval.assert_not_awaited()
@@ -476,7 +516,7 @@ class TestRateLimitUpdate:
             mock_get_client.return_value = mock_redis
             mock_redis.eval = AsyncMock()
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             mock_redis.eval.assert_awaited_once()
 
@@ -496,7 +536,7 @@ class TestRateLimitUpdate:
             mock_get_client.return_value = mock_redis
             mock_redis.eval = AsyncMock()
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             call_args = mock_redis.eval.call_args
             ttl_arg = call_args[0][7]  # TTL is the 8th positional argument (index 7)
@@ -518,7 +558,7 @@ class TestRateLimitUpdate:
             mock_get_client.return_value = mock_redis
             mock_redis.eval = AsyncMock()
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             call_args = mock_redis.eval.call_args
             ttl_arg = call_args[0][7]  # TTL
@@ -543,7 +583,7 @@ class TestRateLimitUpdate:
             mock_get_client.return_value = mock_redis
             mock_redis.eval = AsyncMock()
 
-            await service._update_rate_limit(response)
+            await service._update_rate_limit(_get_scope(), response)
 
             call_args = mock_redis.eval.call_args
             # Verify key count
@@ -576,20 +616,20 @@ class TestGetWithRateLimit:
 
         check_rate_limit_called = False
 
-        async def mock_check_rate_limit():
+        async def mock_check_rate_limit(scope: str):
             nonlocal check_rate_limit_called
             check_rate_limit_called = True
 
         service._check_rate_limit = mock_check_rate_limit
 
         with patch.object(service, "_update_rate_limit", new_callable=AsyncMock):
-            await service.get("user")
+            await service.get("user", scope=_get_scope())
 
             assert check_rate_limit_called
 
     @pytest.mark.asyncio
     async def test_get_updates_rate_limit_after_request(self, service, monkeypatch):
-        """get calls _update_rate_limit after a successful request."""
+        """Get calls _update_rate_limit after a successful request."""
         mock_client = Mock(spec=httpx.AsyncClient)
         current_time = int(datetime.now(timezone.utc).timestamp())
         response = MockResponse(
@@ -608,15 +648,15 @@ class TestGetWithRateLimit:
             with patch.object(
                 service, "_update_rate_limit", new_callable=AsyncMock
             ) as mock_update:
-                await service.get("user")
+                await service.get("user", scope=_get_scope())
 
-                mock_update.assert_awaited_once_with(response)
+                mock_update.assert_awaited_once_with(scope=ANY, response=response)
 
     @pytest.mark.asyncio
     async def test_get_paginated_updates_rate_limit_each_page(
         self, service, monkeypatch
     ):
-        """get paginated calls _update_rate_limit after each page request."""
+        """Get paginated calls _update_rate_limit after each page request."""
         mock_client = Mock(spec=httpx.AsyncClient)
         current_time = int(datetime.now(timezone.utc).timestamp())
         response1 = MockResponse(
@@ -643,7 +683,9 @@ class TestGetWithRateLimit:
             with patch.object(
                 service, "_update_rate_limit", new_callable=AsyncMock
             ) as mock_update:
-                await service.get("users/octo/events", paginate=True)
+                await service.get(
+                    "users/octo/events", scope=_get_scope(), paginate=True
+                )
 
                 assert mock_update.await_count == 2
 
@@ -653,18 +695,21 @@ class TestEnumKeygen:
 
     def test_rate_limit_key_full_key_remaining(self):
         """GitHubRateLimitKey.REMAINING generates correct full key."""
-        key = GitHubRateLimitKey.REMAINING.full_key()
-        assert key == "github:rate_limit:remaining"
+        scope = _get_scope()
+        key = GitHubRateLimitKey.REMAINING.full_key(scope)
+        assert key == f"github:rate_limit:{scope}:remaining"
 
     def test_rate_limit_key_full_key_reset(self):
         """GitHubRateLimitKey.RESET generates correct full key."""
-        key = GitHubRateLimitKey.RESET.full_key()
-        assert key == "github:rate_limit:reset"
+        scope = _get_scope()
+        key = GitHubRateLimitKey.RESET.full_key(scope)
+        assert key == f"github:rate_limit:{scope}:reset"
 
     def test_rate_limit_key_full_key_limit(self):
         """GitHubRateLimitKey.LIMIT generates correct full key."""
-        key = GitHubRateLimitKey.LIMIT.full_key()
-        assert key == "github:rate_limit:limit"
+        scope = _get_scope()
+        key = GitHubRateLimitKey.LIMIT.full_key(scope)
+        assert key == f"github:rate_limit:{scope}:limit"
 
     def test_namespace_values(self):
         """GitHubRedisNamespace has correct values."""

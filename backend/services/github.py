@@ -71,8 +71,7 @@ class GitHubService:
         """
         Get or create a singleton AsyncClient instance.
 
-        Returns:
-            httpx.AsyncClient: The shared AsyncClient instance.
+        :return httpx.AsyncClient: The shared AsyncClient instance.
         """
         async with cls._lock:
             if cls._client is None:
@@ -90,16 +89,21 @@ class GitHubService:
 
     async def _check_rate_limit(
         self,
+        scope: str,
     ) -> None:
         """
         Check the current rate limit usage for the GitHub API.
         If the rate limit is exceeded, sleeps until the rate limit resets.
 
+        :param scope: Scope of the Redis key (e.g. GitHub access token).
+
         :return: None
         """
         try:
-            remaining = await RedisClient.get(GitHubRateLimitKey.REMAINING.full_key())
-            reset_time = await RedisClient.get(GitHubRateLimitKey.RESET.full_key())
+            remaining = await RedisClient.get(
+                GitHubRateLimitKey.REMAINING.full_key(scope)
+            )
+            reset_time = await RedisClient.get(GitHubRateLimitKey.RESET.full_key(scope))
 
             if remaining and int(remaining) < 10:
                 if reset_time:
@@ -133,9 +137,9 @@ class GitHubService:
                 self.LUA_UPDATE_RATE_LIMIT,
                 4,
                 f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:{scope}:timestamp",
-                GitHubRateLimitKey.RESET.full_key(),
-                GitHubRateLimitKey.REMAINING.full_key(),
-                GitHubRateLimitKey.LIMIT.full_key(),
+                GitHubRateLimitKey.RESET.full_key(scope),
+                GitHubRateLimitKey.REMAINING.full_key(scope),
+                GitHubRateLimitKey.LIMIT.full_key(scope),
                 str(current_timestamp),
                 str(ttl),
                 str(reset_time),
@@ -167,12 +171,14 @@ class GitHubService:
     async def get(
         self,
         endpoint: str,
+        scope: str,
         params: Optional[dict[str, Any]] = None,
         paginate: bool = False,
     ) -> Union[dict[str, Any], list[Any]]:
         """
         Performs a GET request to the specified GitHub API endpoint.
         :param endpoint: Endpoint to be requested.
+        :param scope: Scope of the Redis key (e.g. GitHub access token).
         :param params: Additional query parameters.
         :param paginate: Whether to perform pagination during request.
 
@@ -181,7 +187,7 @@ class GitHubService:
         :return: Response from GitHub API.
 
         """
-        await self._check_rate_limit()
+        await self._check_rate_limit(scope)
 
         url = f"{self.base_url}/{endpoint}"
         client = await self.get_client()
@@ -189,7 +195,7 @@ class GitHubService:
         if not paginate:
             response = await client.get(url, headers=self.headers, params=params)
             response.raise_for_status()
-            await self._update_rate_limit(response)
+            await self._update_rate_limit(scope=scope, response=response)
             return response.json()
 
         results = []
@@ -199,7 +205,7 @@ class GitHubService:
                 url, headers=self.headers, params=current_params
             )
             response.raise_for_status()
-            await self._update_rate_limit(response)
+            await self._update_rate_limit(scope=scope, response=response)
             results.extend(response.json())
 
             # Check if next page exists
@@ -207,21 +213,27 @@ class GitHubService:
             current_params = {}  # Next URL already contains query params
         return results
 
-    async def get_user_info(self) -> dict[str, Any]:
+    async def get_user_info(self, scope: str) -> dict[str, Any]:
         """
         Retrieve information about the current user.
+
+        :param scope: Scope of the Redis key (e.g. GitHub access token).
         """
-        return await self.get("user")
+        return await self.get("user", scope)
 
     async def get_user_events(
-        self, username: str, per_page: int = 100
+        self, username: str, per_page: int = 100, scope: str = None
     ) -> list[dict[str, Any]]:
         """
         Retrieve the events related to a specific user.
         :param username: GitHub username of the user.
         :param per_page: Number of events per page.
+        :param scope: Scope of the Redis key (e.g. GitHub access token).
         :return: List of events related to a specific user.
         """
         return await self.get(
-            f"users/{username}/events", params={"per_page": per_page}, paginate=True
+            f"users/{username}/events",
+            params={"per_page": per_page},
+            scope=scope,
+            paginate=True,
         )

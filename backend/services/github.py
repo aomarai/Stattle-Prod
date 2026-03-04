@@ -32,7 +32,7 @@ class GitHubRateLimitKey(Enum):
     LIMIT = "limit"
 
     def full_key(self, scope: str) -> str:
-        """Get the full Redis key."""
+        """Get the full Redis key, namespaced by the provided scope (e.g. GitHub access token hash)."""
         return f"{GitHubRedisNamespace.GITHUB.value}:{GitHubRedisNamespace.RATE_LIMIT.value}:{scope}:{self.value}"
 
 

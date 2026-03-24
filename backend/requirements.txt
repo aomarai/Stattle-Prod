@@ -1,5 +1,5 @@
 alembic==1.18.4
-fastapi[standard]==0.133.1
+fastapi[standard]==0.135.2
 httpx==0.28.1
 pydantic==2.12.5
 psycopg2-binary==2.9.11
